@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+*.dmg
+*.zip
+.DS_Store
+Sources/YTBar/Auth/AuthConfig.swift
