@@ -7,7 +7,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "YTBar",
-            path: "Sources/YTBar",
+            path: "Sources",
             resources: [
                 .copy("Resources/setup-guide.html"),
             ],
@@ -20,7 +20,7 @@ let package = Package(
         .testTarget(
             name: "YTBarTests",
             dependencies: ["YTBar"],
-            path: "Tests/YTBarTests"
+            path: "Tests"
         ),
     ]
 )

@@ -164,7 +164,7 @@ Or open `Package.swift` in Xcode 15+ and build from there.
 ### Architecture
 
 ```
-Sources/YTBar/
+Sources/
   App/       Entry point, AppDelegate, menubar + service wiring
   Auth/      Google OAuth device flow, token storage
   API/       YTMusic search, playlists, stream extraction, lyrics, parsers

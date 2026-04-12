@@ -6,4 +6,4 @@ DerivedData/
 *.dmg
 *.zip
 .DS_Store
-Sources/YTBar/Auth/AuthConfig.swift
+Sources/Auth/AuthConfig.swift
