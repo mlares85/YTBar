@@ -2,6 +2,18 @@
 
 A lightweight native macOS menubar app for streaming YouTube Music. Built with Swift and SwiftUI, YTBar uses ~60 MB of RAM compared to ~300-500 MB for Electron-based alternatives.
 
+<p align="center">
+  <img src="screenshots/main.png" width="340" alt="Player">
+  <img src="screenshots/search.png" width="340" alt="Search">
+</p>
+<p align="center">
+  <img src="screenshots/lyrics.png" width="340" alt="Lyrics">
+  <img src="screenshots/queue.png" width="340" alt="Queue">
+</p>
+<p align="center">
+  <img src="screenshots/settings.png" width="340" alt="Settings">
+</p>
+
 ## Features
 
 **Playback**
