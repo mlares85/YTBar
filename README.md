@@ -41,7 +41,7 @@ A lightweight native macOS menubar app for streaming YouTube Music. Built with S
 
 - **macOS 14 (Sonoma)** or later
 - A **Google account** with a Google Cloud project (free, setup takes ~5 minutes)
-- **YouTube Premium** recommended for ad-free audio (not required)
+- **YouTube Premium** is not required but supports the artists you listen to
 - **yt-dlp** is downloaded automatically on first launch
 
 ## Installation
