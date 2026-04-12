@@ -52,6 +52,8 @@ final class AppViewModel: ObservableObject {
     @Published var queueTracks: [Track] = []
     @Published var queueIndex: Int = 0
     @Published var showQueue = false
+    @Published var isShuffled: Bool = false
+    @Published var repeatMode: RepeatMode = .off
     @Published var cacheConfig: CacheConfig = .default
     @Published var cacheUsageMB: Int = 0
     @Published var windowOpacity: Double = 1.0
@@ -111,6 +113,8 @@ final class AppViewModel: ObservableObject {
     var onSetDebugLogging: ((Bool) -> Void)?
     var onAppendTracksToPlaylist: ((String, [Track]) async throws -> Void)?
     var onQueueReorder: ((IndexSet, Int) -> Void)?
+    var onToggleShuffle: (() -> Void)?
+    var onCycleRepeatMode: (() -> Void)?
     var onFetchLyrics: ((String, String, String) async -> LyricsResult?)?
     var onRateVideo: ((String, String) async throws -> Void)?
     var onGetRating: ((String) async throws -> String)?
@@ -233,6 +237,14 @@ final class AppViewModel: ObservableObject {
 
     func moveQueueItems(from source: IndexSet, to destination: Int) {
         onQueueReorder?(source, destination)
+    }
+
+    func toggleShuffle() {
+        onToggleShuffle?()
+    }
+
+    func cycleRepeatMode() {
+        onCycleRepeatMode?()
     }
 
     func appendAutoExtendedToSourcePlaylist() {

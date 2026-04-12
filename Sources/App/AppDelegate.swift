@@ -252,6 +252,8 @@ private extension AppDelegate {
         viewModel.autoHideBrowsePanel = uiConfig.autoHideBrowsePanel
         viewModel.browsePanelExpanded = !uiConfig.autoHideBrowsePanel
         viewModel.autoExtendQueueEnabled = uiConfig.autoExtendQueueWithRadio
+        viewModel.volume = uiConfig.volume
+        audioPlayer.setVolume(Float(uiConfig.volume))
         viewModel.debugLoggingEnabled = uiConfig.debugLoggingEnabled
         DebugLogger.shared.isEnabled = uiConfig.debugLoggingEnabled
         streamExtractor.currentFormat = uiConfig.streamQuality.ytdlpFormat
@@ -392,7 +394,21 @@ private extension AppDelegate {
             self?.audioPlayer.play()
         }
         viewModel.onSetVolume = { [weak self] vol in
-            self?.audioPlayer.setVolume(vol)
+            guard let self else { return }
+            self.audioPlayer.setVolume(vol)
+            self.uiConfig.volume = Double(vol)
+            try? self.uiConfig.save()
+        }
+        viewModel.onToggleShuffle = { [weak self] in
+            self?.queueManager.toggleShuffle()
+        }
+        viewModel.onCycleRepeatMode = { [weak self] in
+            guard let self else { return }
+            switch self.queueManager.repeatMode {
+            case .off: self.queueManager.repeatMode = .all
+            case .all: self.queueManager.repeatMode = .one
+            case .one: self.queueManager.repeatMode = .off
+            }
         }
         viewModel.onQueueTracks = { [weak self] tracks, idx in
             self?.queueManager.setPlaylist(tracks, startAt: idx)
@@ -423,6 +439,8 @@ private extension AppDelegate {
             self.viewModel.queueTracks = self.queueManager.tracks
             self.viewModel.queueIndex = self.queueManager.currentIndex
             self.viewModel.autoExtendStartIndex = self.queueManager.autoExtendStartIndex
+            self.viewModel.isShuffled = self.queueManager.isShuffled
+            self.viewModel.repeatMode = self.queueManager.repeatMode
             if let track = self.viewModel.currentTrack, track.durationSeconds > 0 {
                 self.viewModel.duration = Double(track.durationSeconds)
             } else {

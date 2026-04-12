@@ -61,10 +61,12 @@ struct NowPlayingView: View {
     }
 
     private var controlsRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            shuffleButton
             previousButton
             playPauseButton
             nextButton
+            repeatButton
             likeButton
             radioButton
             lyricsButton
@@ -111,6 +113,17 @@ struct NowPlayingView: View {
         .help("Start radio from current track")
     }
 
+    private var shuffleButton: some View {
+        Button(action: vm.toggleShuffle) {
+            Image(systemName: "shuffle")
+                .font(.system(size: 11))
+                .foregroundStyle(vm.isShuffled ? Color.accentColor : .primary)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(vm.isShuffled ? "Shuffle on" : "Shuffle off")
+        .help(vm.isShuffled ? "Turn off shuffle" : "Turn on shuffle")
+    }
+
     private var previousButton: some View {
         Button(action: vm.previous) {
             Image(systemName: "backward.fill")
@@ -137,6 +150,33 @@ struct NowPlayingView: View {
         .buttonStyle(.borderless)
         .accessibilityLabel("Next track")
         .help("Next track (⌘→)")
+    }
+
+    private var repeatButton: some View {
+        Button(action: vm.cycleRepeatMode) {
+            Image(systemName: repeatIcon)
+                .font(.system(size: 11))
+                .foregroundStyle(vm.repeatMode != .off ? Color.accentColor : .primary)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(repeatLabel)
+        .help(repeatLabel)
+    }
+
+    private var repeatIcon: String {
+        switch vm.repeatMode {
+        case .off: return "repeat"
+        case .all: return "repeat"
+        case .one: return "repeat.1"
+        }
+    }
+
+    private var repeatLabel: String {
+        switch vm.repeatMode {
+        case .off: return "Repeat off"
+        case .all: return "Repeat all"
+        case .one: return "Repeat one"
+        }
     }
 
     private var volumeSlider: some View {

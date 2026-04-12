@@ -8,6 +8,7 @@ struct UIConfig: Codable {
     var autoHideBrowsePanel: Bool = true
     var autoExtendQueueWithRadio: Bool = true
     var debugLoggingEnabled: Bool = false
+    var volume: Double = 0.7
 
     static let `default` = UIConfig(windowOpacity: 1.0)
 
@@ -51,6 +52,7 @@ extension UIConfig {
         case autoHideBrowsePanel
         case autoExtendQueueWithRadio
         case debugLoggingEnabled
+        case volume
     }
 
     init(from decoder: Decoder) throws {
@@ -62,7 +64,8 @@ extension UIConfig {
             previousRestartThreshold: (try? c.decode(Double.self, forKey: .previousRestartThreshold)) ?? 5.0,
             autoHideBrowsePanel: (try? c.decode(Bool.self, forKey: .autoHideBrowsePanel)) ?? true,
             autoExtendQueueWithRadio: (try? c.decode(Bool.self, forKey: .autoExtendQueueWithRadio)) ?? true,
-            debugLoggingEnabled: (try? c.decode(Bool.self, forKey: .debugLoggingEnabled)) ?? false
+            debugLoggingEnabled: (try? c.decode(Bool.self, forKey: .debugLoggingEnabled)) ?? false,
+            volume: (try? c.decode(Double.self, forKey: .volume)) ?? 0.7
         )
     }
 }
