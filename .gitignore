@@ -6,4 +6,5 @@ DerivedData/
 *.dmg
 *.zip
 .DS_Store
+docs/
 Sources/Auth/AuthConfig.swift
