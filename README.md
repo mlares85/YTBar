@@ -55,7 +55,7 @@ A lightweight native macOS menubar app for streaming YouTube Music. Built with S
 
 ### Download
 
-Download the latest release from the [Releases](../../releases) page. Unzip and drag `YTBar.app` to your Applications folder.
+Download `YTBar-v1.0.0.dmg` from the [Releases](../../releases) page. Open the DMG and drag `YTBar.app` to your Applications folder.
 
 Since the app is unsigned, macOS Gatekeeper will block it on first launch. Right-click the app and choose **Open**, then click **Open** in the dialog.
 
