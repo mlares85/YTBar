@@ -34,7 +34,7 @@ struct UIConfig: Codable {
 
     func save() throws {
         let data = try JSONEncoder().encode(self)
-        try data.write(to: URL(fileURLWithPath: Self.filePath))
+        try data.write(to: URL(fileURLWithPath: Self.filePath), options: .atomic)
     }
 }
 

@@ -14,6 +14,7 @@ struct LyricsResult: Equatable, Codable {
 
 actor LyricsProvider {
     private var cache: [String: LyricsResult] = [:]
+    private var cacheAccessOrder: [String] = []
     private let cacheDir: URL
     private let onLyricsCached: (@Sendable (String, Int64) -> Void)?
 
@@ -29,9 +30,13 @@ actor LyricsProvider {
         videoId: String, title: String, artist: String
     ) async -> LyricsResult? {
         let memKey = "\(artist)|\(title)"
-        if let cached = cache[memKey] { return cached }
+        if let cached = cache[memKey] {
+            touchAccessOrder(memKey)
+            return cached
+        }
         if let disk = loadFromDisk(videoId: videoId) {
             cache[memKey] = disk
+            touchAccessOrder(memKey)
             return disk
         }
 
@@ -52,6 +57,23 @@ actor LyricsProvider {
             saveToDisk(videoId: videoId, result: result)
         }
         return result
+    }
+}
+
+// MARK: - Memory Cache Management
+
+extension LyricsProvider {
+    func trimCache(maxEntries: Int) {
+        guard cache.count > maxEntries else { return }
+        let toRemove = cacheAccessOrder.prefix(cache.count - maxEntries)
+        for key in toRemove { cache.removeValue(forKey: key) }
+        cacheAccessOrder.removeFirst(toRemove.count)
+        log("Trimmed in-memory cache to \(cache.count) entries")
+    }
+
+    private func touchAccessOrder(_ key: String) {
+        cacheAccessOrder.removeAll { $0 == key }
+        cacheAccessOrder.append(key)
     }
 }
 

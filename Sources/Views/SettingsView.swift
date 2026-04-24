@@ -123,7 +123,7 @@ struct SettingsView: View {
 
     private var signInRow: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: vm.signIn) {
+            Button(action: { vm.signIn(); vm.showToast(.info, message: "Auth code copied to clipboard") }) {
                 if vm.isSigningIn && vm.deviceCode == nil {
                     ProgressView().controlSize(.small)
                 } else {
@@ -133,6 +133,12 @@ struct SettingsView: View {
             .disabled(vm.isSigningIn)
             .accessibilityLabel("Sign in with Google")
             .help("Sign in with Google")
+            if !vm.isSigningIn {
+                Text("A browser will open and an auth code will be copied to your clipboard — just paste it when prompted.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let err = vm.signInError {
                 Text(err)
                     .font(.system(size: 11))
@@ -145,8 +151,8 @@ struct SettingsView: View {
     @ViewBuilder
     private var deviceCodeView: some View {
         if let code = vm.deviceCode {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("A browser window opened. Enter this code:")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("A browser window opened. Paste the code when prompted.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
@@ -154,14 +160,15 @@ struct SettingsView: View {
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .textSelection(.enabled)
                         .accessibilityLabel("Device code: \(code)")
-                    Button(action: { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(code, forType: .string) }) {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Copy code")
-                    .help("Copy device code to clipboard")
                 }
+                Button(action: { copyCode(code) }) {
+                    Label("Copy Code Again", systemImage: "doc.on.doc")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel("Copy auth code to clipboard")
+                .help("Copy auth code to clipboard in case you overwrote it")
                 HStack(spacing: 4) {
                     ProgressView().controlSize(.mini)
                     Text("Waiting for authorization...")
@@ -170,6 +177,12 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func copyCode(_ code: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
+        vm.showToast(.success, message: "Code copied to clipboard")
     }
 
     private var signOutRow: some View {

@@ -211,7 +211,7 @@ private extension AVPlayerEngine {
     }
 
     func addTimeObserver() {
-        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
         timeObserver = player?.addPeriodicTimeObserver(
             forInterval: interval, queue: .main
         ) { [weak self] time in

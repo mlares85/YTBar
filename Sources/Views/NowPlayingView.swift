@@ -62,15 +62,15 @@ struct NowPlayingView: View {
 
     private var controlsRow: some View {
         HStack(spacing: 8) {
-            shuffleButton
             previousButton
             playPauseButton
             nextButton
+            Spacer(minLength: 4)
             repeatButton
+            shuffleButton
             likeButton
             radioButton
             lyricsButton
-            Spacer(minLength: 4)
             volumeSlider
         }
     }

@@ -18,7 +18,7 @@ struct KeychainHelper {
 
     func save(_ tokens: AuthTokens) throws {
         let data = try JSONEncoder().encode(tokens)
-        try data.write(to: URL(fileURLWithPath: filePath))
+        try data.write(to: URL(fileURLWithPath: filePath), options: .atomic)
     }
 
     func retrieve() -> AuthTokens? {

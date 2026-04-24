@@ -200,6 +200,8 @@ extension AppDelegate: NSPopoverDelegate {
     }
 
     func popoverDidClose(_ notification: Notification) {
+        // Free search results memory when the popover is dismissed.
+        viewModel.searchResults = []
         // When auto-hide is on, every time the user dismisses the popover we
         // reset the browse panel so the next open starts with it hidden.
         guard viewModel?.autoHideBrowsePanel == true else { return }
@@ -430,25 +432,47 @@ private extension AppDelegate {
     }
 
     func startUISync() {
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        // Fast timer for playback progress — keeps lyrics in sync.
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self else { return }
+            self.viewModel.progress = self.audioPlayer.currentTime
             if self.pendingTrack == nil {
                 self.viewModel.playerState = self.audioPlayer.state
             }
-            self.viewModel.progress = self.audioPlayer.currentTime
-            self.viewModel.queueTracks = self.queueManager.tracks
-            self.viewModel.queueIndex = self.queueManager.currentIndex
-            self.viewModel.autoExtendStartIndex = self.queueManager.autoExtendStartIndex
-            self.viewModel.isShuffled = self.queueManager.isShuffled
-            self.viewModel.repeatMode = self.queueManager.repeatMode
             if let track = self.viewModel.currentTrack, track.durationSeconds > 0 {
                 self.viewModel.duration = Double(track.durationSeconds)
             } else {
                 self.viewModel.duration = self.audioPlayer.duration / 2
             }
+        }
+        // Slower timer for queue state, cache stats, Now Playing bridge.
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.viewModel.queueTracks = self.queueManager.tracks
+            self.viewModel.queueIndex = self.queueManager.currentIndex
+            self.viewModel.autoExtendStartIndex = self.queueManager.autoExtendStartIndex
+            self.viewModel.isShuffled = self.queueManager.isShuffled
+            self.viewModel.repeatMode = self.queueManager.repeatMode
             self.viewModel.cacheUsageMB = self.cacheMB()
             self.syncNowPlaying()
         }
+        startMemoryCleanup()
+    }
+
+    func startMemoryCleanup() {
+        // Every 5 minutes: evict expired stream URLs and flush
+        // the system thumbnail cache to keep RSS low.
+        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.evictExpiredURLCache()
+            URLCache.shared.removeAllCachedResponses()
+            Task { await self.lyricsProvider.trimCache(maxEntries: 50) }
+        }
+    }
+
+    func evictExpiredURLCache() {
+        let now = Date()
+        urlCache = urlCache.filter { now.timeIntervalSince($0.value.1) < 18000 }
     }
 
     func syncNowPlaying() {
@@ -465,8 +489,12 @@ private extension AppDelegate {
         viewModel.configClientID = config.clientID
         viewModel.configClientSecret = config.clientSecret
         viewModel.onSaveConfig = { [weak self] id, secret in
-            var c = AppConfig(clientID: id, clientSecret: secret)
-            try? c.save()
+            let c = AppConfig(clientID: id, clientSecret: secret)
+            do {
+                try c.save()
+            } catch {
+                self?.logDebug("AppConfig save failed: \(error)")
+            }
             self?.auth.updateCredentials(id: id, secret: secret)
         }
     }

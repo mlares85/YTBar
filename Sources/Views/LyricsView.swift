@@ -69,7 +69,7 @@ private struct SyncedLyricsContent: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 2)
                             .id(idx)
-                            .animation(.easeInOut(duration: 0.5), value: activeIndex)
+                            .animation(.easeInOut(duration: 0.25), value: activeIndex)
                     }
                     Spacer().frame(height: 80)
                 }
@@ -78,7 +78,7 @@ private struct SyncedLyricsContent: View {
             .onChange(of: computedIndex) { _, newIdx in
                 guard newIdx != activeIndex else { return }
                 activeIndex = newIdx
-                withAnimation(.easeInOut(duration: 0.6)) {
+                withAnimation(.easeInOut(duration: 0.3)) {
                     proxy.scrollTo(newIdx, anchor: .center)
                 }
             }

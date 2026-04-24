@@ -113,6 +113,6 @@ extension CacheMetadata {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(entries) else { return }
-        try? data.write(to: URL(fileURLWithPath: Self.filePath))
+        try? data.write(to: URL(fileURLWithPath: Self.filePath), options: .atomic)
     }
 }
