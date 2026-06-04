@@ -72,7 +72,9 @@ extension LyricsProvider {
     }
 
     private func touchAccessOrder(_ key: String) {
-        cacheAccessOrder.removeAll { $0 == key }
+        if let idx = cacheAccessOrder.firstIndex(of: key) {
+            cacheAccessOrder.remove(at: idx)
+        }
         cacheAccessOrder.append(key)
     }
 }

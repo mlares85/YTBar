@@ -36,9 +36,8 @@ enum YTMusicParser {
         let r = item["playlistPanelVideoRenderer"] as? [String: Any] ?? [:]
         guard let vid = r["videoId"] as? String, !vid.isEmpty else { return nil }
         let title = extractRunText(from: r["title"])
-        let artist = extractRunText(from: r["longBylineText"])
+        let artist = extractRunText(from: r["shortBylineText"])
         let durText = extractRunText(from: r["lengthText"])
-        let thumb = dig(r, "thumbnail", "thumbnails")
         let thumbs = r["thumbnail"] as? [String: Any] ?? [:]
         let tList = thumbs["thumbnails"] as? [[String: Any]] ?? []
         let thumbURL = (tList.first?["url"] as? String).flatMap { URL(string: $0) }
@@ -72,8 +71,14 @@ extension YTMusicParser {
 extension YTMusicParser {
     static func extractMusicShelves(from sections: [[String: Any]]) -> [[[String: Any]]] {
         sections.compactMap { section in
-            let shelf = section["musicShelfRenderer"] as? [String: Any]
-            return shelf?["contents"] as? [[String: Any]]
+            if let shelf = section["musicShelfRenderer"] as? [String: Any] {
+                return shelf["contents"] as? [[String: Any]]
+            }
+            if let card = section["musicCardShelfRenderer"] as? [String: Any] {
+                return card["contents"] as? [[String: Any]]
+            }
+            let isr = section["itemSectionRenderer"] as? [String: Any]
+            return isr?["contents"] as? [[String: Any]]
         }
     }
 }
@@ -89,12 +94,12 @@ extension YTMusicParser {
         guard let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any] else { return nil }
         guard let videoId = extractVideoId(from: renderer) else { return nil }
         let columns = flexColumnTexts(from: renderer)
-        guard columns.count >= 2 else { return nil }
+        guard !columns.isEmpty else { return nil }
         return Track(
             id: videoId,
             title: columns[0],
-            artist: columns[1],
-            album: columns.count >= 3 ? columns[2] : nil,
+            artist: extractArtist(from: renderer),
+            album: extractAlbum(from: columns),
             durationSeconds: parseDuration(from: renderer),
             thumbnailURL: extractThumbnailURL(from: renderer)
         )
@@ -144,6 +149,28 @@ extension YTMusicParser {
 // MARK: - Field Helpers
 
 extension YTMusicParser {
+    static func columnRuns(from renderer: [String: Any], at index: Int) -> [[String: Any]] {
+        let cols = renderer["flexColumns"] as? [[String: Any]] ?? []
+        guard index < cols.count else { return [] }
+        let flex = cols[index]["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
+        return (flex?["text"] as? [String: Any])?["runs"] as? [[String: Any]] ?? []
+    }
+
+    static func extractArtist(from renderer: [String: Any]) -> String {
+        let runs = columnRuns(from: renderer, at: 1)
+        if runs.count >= 3, let artist = runs[2]["text"] as? String {
+            return artist
+        }
+        return runs.compactMap { $0["text"] as? String }.joined()
+    }
+
+    static func extractAlbum(from columns: [String]) -> String? {
+        guard columns.count >= 3 else { return nil }
+        let text = columns[2]
+        if text.contains("plays") || text.contains("views") { return nil }
+        return text
+    }
+
     static func extractVideoId(from renderer: [String: Any]) -> String? {
         let data = renderer["playlistItemData"] as? [String: Any]
         return data?["videoId"] as? String
@@ -164,7 +191,6 @@ extension YTMusicParser {
     }
 
     static func parseDuration(from renderer: [String: Any]) -> Int {
-        // Try fixedColumns first (standard location)
         let fixed = renderer["fixedColumns"] as? [[String: Any]] ?? []
         if let col = fixed.first {
             let flex = col["musicResponsiveListItemFixedColumnRenderer"] as? [String: Any]
@@ -172,10 +198,8 @@ extension YTMusicParser {
             let secs = durationToSeconds(text)
             if secs > 0 { return secs }
         }
-        // Fallback: check last flex column for duration-like text
-        let columns = flexColumnTexts(from: renderer)
-        for col in columns.reversed() {
-            let secs = durationToSeconds(col)
+        for run in columnRuns(from: renderer, at: 1).reversed() {
+            let secs = durationToSeconds(run["text"] as? String ?? "")
             if secs > 0 { return secs }
         }
         return 0

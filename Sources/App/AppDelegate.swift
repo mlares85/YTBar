@@ -39,6 +39,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindViewModel()
         syncAuthState()
         installDependencies()
+        restoreSessionIfEnabled()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        saveSessionIfEnabled()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(
@@ -174,6 +179,8 @@ extension AppDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            viewModel.browsePanelExpanded = !viewModel.autoHideBrowsePanel
+            updatePopoverSizeIfNeeded()
             popover.show(
                 relativeTo: button.bounds,
                 of: button,
@@ -304,6 +311,13 @@ private extension AppDelegate {
             self.uiConfig.debugLoggingEnabled = enabled
             try? self.uiConfig.save()
             DebugLogger.shared.isEnabled = enabled
+        }
+        viewModel.resumeSessionEnabled = uiConfig.resumeSessionEnabled
+        viewModel.onSetResumeSession = { [weak self] enabled in
+            guard let self else { return }
+            self.uiConfig.resumeSessionEnabled = enabled
+            try? self.uiConfig.save()
+            if !enabled { PlaybackState.clear() }
         }
     }
 
@@ -466,13 +480,24 @@ private extension AppDelegate {
             guard let self else { return }
             self.evictExpiredURLCache()
             URLCache.shared.removeAllCachedResponses()
+            self.cacheMetadata.pruneStaleEntries()
             Task { await self.lyricsProvider.trimCache(maxEntries: 50) }
         }
     }
 
+    private static let urlCacheMaxEntries = 200
+    private static let urlCacheTTL: TimeInterval = 18000
+
     func evictExpiredURLCache() {
         let now = Date()
-        urlCache = urlCache.filter { now.timeIntervalSince($0.value.1) < 18000 }
+        urlCache = urlCache.filter { now.timeIntervalSince($0.value.1) < Self.urlCacheTTL }
+    }
+
+    func trimURLCacheIfNeeded() {
+        guard urlCache.count > Self.urlCacheMaxEntries else { return }
+        let sorted = urlCache.sorted { $0.value.1 < $1.value.1 }
+        let drop = urlCache.count - Self.urlCacheMaxEntries
+        for (key, _) in sorted.prefix(drop) { urlCache.removeValue(forKey: key) }
     }
 
     func syncNowPlaying() {
@@ -703,6 +728,7 @@ private extension AppDelegate {
         guard queueManager.repeatMode != .all else { return }
         let tracks = queueManager.tracks
         guard tracks.count > 1 else { return }   // let loadRadioIfNeeded handle this
+        guard tracks.count < QueueManager.maxTracks else { return }
         let remaining = tracks.count - 1 - queueManager.currentIndex
         guard remaining < Self.autoExtendLookahead else { return }
         isAutoExtendingQueue = true
@@ -742,6 +768,7 @@ private extension AppDelegate {
             videoId: videoId
         )
         urlCache[videoId] = (url, Date())
+        trimURLCacheIfNeeded()
         return url
     }
 
@@ -775,5 +802,40 @@ private extension AppDelegate {
         statusItem.button?.image = NSImage(
             systemSymbolName: name, accessibilityDescription: "YTBar"
         )
+    }
+
+    func saveSessionIfEnabled() {
+        guard uiConfig.resumeSessionEnabled else { return }
+        let tracks = queueManager.tracks
+        guard !tracks.isEmpty else { return }
+        let state = PlaybackState(
+            queue: tracks,
+            currentIndex: queueManager.currentIndex,
+            progressSeconds: audioPlayer.currentTime,
+            repeatMode: queueManager.repeatMode,
+            isShuffled: queueManager.isShuffled,
+            queueSourcePlaylistId: viewModel.queueSourcePlaylistId,
+            queueSourcePlaylistTitle: viewModel.queueSourcePlaylistTitle,
+            autoExtendStartIndex: queueManager.autoExtendStartIndex
+        )
+        state.save()
+        logDebug("Session saved: \(tracks.count) tracks, idx=\(state.currentIndex)")
+    }
+
+    func restoreSessionIfEnabled() {
+        guard uiConfig.resumeSessionEnabled else { return }
+        guard let state = PlaybackState.load(), !state.queue.isEmpty else { return }
+        let idx = min(state.currentIndex, state.queue.count - 1)
+        queueManager.setPlaylist(state.queue, startAt: idx)
+        queueManager.repeatMode = state.repeatMode
+        queueManager.autoExtendStartIndex = state.autoExtendStartIndex
+        viewModel.queueSourcePlaylistId = state.queueSourcePlaylistId
+        viewModel.queueSourcePlaylistTitle = state.queueSourcePlaylistTitle
+        let track = state.queue[idx]
+        viewModel.currentTrack = track
+        viewModel.progress = state.progressSeconds
+        viewModel.duration = Double(track.durationSeconds)
+        viewModel.playerState = .paused
+        logDebug("Restored session: \(state.queue.count) tracks, idx=\(idx)")
     }
 }

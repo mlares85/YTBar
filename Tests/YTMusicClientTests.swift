@@ -72,6 +72,30 @@ final class YTMusicClientSearchTests: XCTestCase {
         XCTAssertEqual(result.playlists[0].trackCount, 50)
     }
 
+    func testSearchParsesItemSectionRenderer() async throws {
+        http.responses = [(jsonData(Fixtures.searchItemSectionJSON), okResponse())]
+
+        let result = try await sut.search(query: "test")
+
+        XCTAssertEqual(result.tracks.count, 1)
+        XCTAssertEqual(result.tracks[0].id, "abc123")
+        XCTAssertEqual(result.tracks[0].title, "Creep")
+        XCTAssertEqual(result.tracks[0].artist, "Radiohead")
+        XCTAssertNil(result.tracks[0].album)
+    }
+
+    func testSearchParsesCardShelfWithDuration() async throws {
+        http.responses = [(jsonData(Fixtures.searchCardShelfJSON), okResponse())]
+
+        let result = try await sut.search(query: "test")
+
+        XCTAssertEqual(result.tracks.count, 1)
+        XCTAssertEqual(result.tracks[0].id, "card456")
+        XCTAssertEqual(result.tracks[0].title, "Anti-Hero")
+        XCTAssertEqual(result.tracks[0].artist, "Taylor Swift")
+        XCTAssertEqual(result.tracks[0].durationSeconds, 227)
+    }
+
     func testSearchHandlesEmptyResults() async throws {
         http.responses = [(jsonData(Fixtures.emptySearchJSON), okResponse())]
 
@@ -92,6 +116,30 @@ final class YTMusicClientSearchTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
+    }
+}
+
+// MARK: - Radio Mix Tests
+
+final class YTMusicClientRadioTests: XCTestCase {
+    private var http: StubHTTPClient!
+    private var sut: YTMusicClient!
+
+    override func setUp() {
+        http = StubHTTPClient()
+        sut = YTMusicClient(httpClient: http) { "test-token" }
+    }
+
+    func testRadioMixParsesShortBylineArtist() async throws {
+        http.responses = [(jsonData(Fixtures.radioMixJSON), okResponse())]
+
+        let tracks = try await sut.getRadioMix(videoId: "abc123")
+
+        XCTAssertEqual(tracks.count, 1)
+        XCTAssertEqual(tracks[0].id, "vid999")
+        XCTAssertEqual(tracks[0].title, "Take On Me")
+        XCTAssertEqual(tracks[0].artist, "a-ha")
+        XCTAssertEqual(tracks[0].durationSeconds, 227)
     }
 }
 
@@ -171,6 +219,45 @@ final class YTMusicClientRequestTests: XCTestCase {
     }
 }
 
+// MARK: - PlaybackState Tests
+
+final class PlaybackStateTests: XCTestCase {
+    func testRoundTripEncodeDecode() throws {
+        let track = Track(
+            id: "vid1", title: "Song", artist: "Artist",
+            album: nil, durationSeconds: 200, thumbnailURL: nil
+        )
+        let original = PlaybackState(
+            queue: [track],
+            currentIndex: 0,
+            progressSeconds: 42.5,
+            repeatMode: .all,
+            isShuffled: false,
+            queueSourcePlaylistId: "PL123",
+            queueSourcePlaylistTitle: "My List",
+            autoExtendStartIndex: nil
+        )
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(PlaybackState.self, from: data)
+        XCTAssertEqual(decoded.queue.count, 1)
+        XCTAssertEqual(decoded.queue[0].id, "vid1")
+        XCTAssertEqual(decoded.currentIndex, 0)
+        XCTAssertEqual(decoded.progressSeconds, 42.5)
+        XCTAssertEqual(decoded.repeatMode, .all)
+        XCTAssertEqual(decoded.queueSourcePlaylistId, "PL123")
+    }
+
+    func testDecodesWithMissingFields() throws {
+        let json = #"{"queue":[],"currentIndex":0}"#
+        let data = json.data(using: .utf8)!
+        let state = try JSONDecoder().decode(PlaybackState.self, from: data)
+        XCTAssertEqual(state.progressSeconds, 0)
+        XCTAssertEqual(state.repeatMode, .off)
+        XCTAssertFalse(state.isShuffled)
+        XCTAssertNil(state.queueSourcePlaylistId)
+    }
+}
+
 // MARK: - Fixtures
 
 private enum Fixtures {
@@ -238,6 +325,70 @@ private enum Fixtures {
     }
     """
 
+    static let searchItemSectionJSON = """
+    {
+      "contents": {
+        "tabbedSearchResultsRenderer": {
+          "tabs": [{
+            "tabRenderer": {
+              "content": {
+                "sectionListRenderer": {
+                  "contents": [{
+                    "itemSectionRenderer": {
+                      "contents": [{
+                        "musicResponsiveListItemRenderer": {
+                          "playlistItemData": {"videoId": "abc123"},
+                          "flexColumns": [
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Creep"}]}}},
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Song"}, {"text": " • "}, {"text": "Radiohead"}]}}},
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "2.1B plays"}]}}}
+                          ],
+                          "thumbnail": {"musicThumbnailRenderer": {"thumbnail": {"thumbnails": [{"url": "https://lh3.googleusercontent.com/thumb2"}]}}}
+                        }
+                      }]
+                    }
+                  }]
+                }
+              }
+            }
+          }]
+        }
+      }
+    }
+    """
+
+    static let searchCardShelfJSON = """
+    {
+      "contents": {
+        "tabbedSearchResultsRenderer": {
+          "tabs": [{
+            "tabRenderer": {
+              "content": {
+                "sectionListRenderer": {
+                  "contents": [{
+                    "musicCardShelfRenderer": {
+                      "contents": [{
+                        "musicResponsiveListItemRenderer": {
+                          "playlistItemData": {"videoId": "card456"},
+                          "flexColumns": [
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Anti-Hero"}]}}},
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Song"}, {"text": " • "}, {"text": "Taylor Swift"}, {"text": " • "}, {"text": "3:47"}]}}},
+                            {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "650M plays"}]}}}
+                          ],
+                          "thumbnail": {"musicThumbnailRenderer": {"thumbnail": {"thumbnails": [{"url": "https://lh3.googleusercontent.com/thumb3"}]}}}
+                        }
+                      }]
+                    }
+                  }]
+                }
+              }
+            }
+          }]
+        }
+      }
+    }
+    """
+
     static let emptySearchJSON = """
     {
       "contents": {
@@ -251,6 +402,41 @@ private enum Fixtures {
               }
             }
           }]
+        }
+      }
+    }
+    """
+
+    static let radioMixJSON = """
+    {
+      "contents": {
+        "singleColumnMusicWatchNextResultsRenderer": {
+          "tabbedRenderer": {
+            "watchNextTabbedResultsRenderer": {
+              "tabs": [{
+                "tabRenderer": {
+                  "content": {
+                    "musicQueueRenderer": {
+                      "content": {
+                        "playlistPanelRenderer": {
+                          "contents": [{
+                            "playlistPanelVideoRenderer": {
+                              "videoId": "vid999",
+                              "title": {"runs": [{"text": "Take On Me"}]},
+                              "longBylineText": {"runs": [{"text": "a-ha"}, {"text": " \\u2022 "}, {"text": "2.4B views"}, {"text": " \\u2022 "}, {"text": "12M likes"}]},
+                              "shortBylineText": {"runs": [{"text": "a-ha"}]},
+                              "lengthText": {"runs": [{"text": "3:47"}]},
+                              "thumbnail": {"thumbnails": [{"url": "https://example.com/thumb"}]}
+                            }
+                          }]
+                        }
+                      }
+                    }
+                  }
+                }
+              }]
+            }
+          }
         }
       }
     }

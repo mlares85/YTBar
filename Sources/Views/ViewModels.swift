@@ -43,6 +43,7 @@ final class AppViewModel: ObservableObject {
     @Published var browsePanelExpanded: Bool = false
     @Published var autoExtendQueueEnabled: Bool = true
     @Published var debugLoggingEnabled: Bool = false
+    @Published var resumeSessionEnabled: Bool = true
     @Published var autoExtendStartIndex: Int?
     @Published var isAppendingToPlaylist: Bool = false
     @Published var deviceCode: String?
@@ -111,6 +112,7 @@ final class AppViewModel: ObservableObject {
     var onSetAutoHideBrowsePanel: ((Bool) -> Void)?
     var onSetAutoExtendQueueEnabled: ((Bool) -> Void)?
     var onSetDebugLogging: ((Bool) -> Void)?
+    var onSetResumeSession: ((Bool) -> Void)?
     var onAppendTracksToPlaylist: ((String, [Track]) async throws -> Void)?
     var onQueueReorder: ((IndexSet, Int) -> Void)?
     var onToggleShuffle: (() -> Void)?

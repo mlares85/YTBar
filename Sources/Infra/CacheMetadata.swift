@@ -79,6 +79,12 @@ final class CacheMetadata {
             .filter(\.isCached)
             .sorted { $0.lastPlayedAt < $1.lastPlayedAt }
     }
+
+    func pruneStaleEntries(olderThan days: Int = 90) {
+        let cutoff = Date().addingTimeInterval(-Double(days * 86400))
+        let stale = entries.filter { !$0.value.isCached && $0.value.lastPlayedAt < cutoff }
+        for key in stale.keys { entries.removeValue(forKey: key) }
+    }
 }
 
 // MARK: - Persistence

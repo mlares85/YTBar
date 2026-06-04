@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 final class QueueManager: ObservableObject {
+    static let maxTracks = 500
     @Published var tracks: [Track] = []
     @Published var currentIndex: Int = 0
     @Published var repeatMode: RepeatMode = .off
@@ -39,10 +40,12 @@ final class QueueManager: ObservableObject {
     /// render a divider between the original queue and the new tracks.
     func appendAutoExtended(_ newTracks: [Track]) {
         guard !newTracks.isEmpty else { return }
+        let room = Self.maxTracks - tracks.count
+        guard room > 0 else { return }
         if autoExtendStartIndex == nil {
             autoExtendStartIndex = tracks.count
         }
-        tracks.append(contentsOf: newTracks)
+        tracks.append(contentsOf: newTracks.prefix(room))
     }
 
     /// Clears the divider. Called after the user appends the auto-extended

@@ -13,6 +13,7 @@ A lightweight native macOS menubar app for streaming YouTube Music. Built with S
 
 **Playback**
 - Stream any track from the YouTube Music catalog
+- Session restore — reopens with your queue and track position from last session (toggleable)
 - Synced lyrics with auto-scroll (plain text fallback)
 - Radio mix generation from any track
 - Auto-extend queue with radio when nearing the end of a playlist
@@ -55,7 +56,7 @@ A lightweight native macOS menubar app for streaming YouTube Music. Built with S
 
 ### Download
 
-Download `YTBar-v1.0.0.dmg` from the [Releases](../../releases) page. Open the DMG and drag `YTBar.app` to your Applications folder.
+Download the latest DMG from the [Releases](../../releases) page. Open the DMG and drag `YTBar.app` to your Applications folder.
 
 Since the app is unsigned, macOS Gatekeeper will block it on first launch. Right-click the app and choose **Open**, then click **Open** in the dialog.
 
@@ -133,6 +134,7 @@ The app does **not** upload videos, manage your channel, or access any data beyo
 |---|---|
 | Config | `~/Library/Application Support/YTBar/config.json` |
 | Auth tokens | `~/Library/Application Support/YTBar/com.ytbar.auth.json` |
+| Session state | `~/Library/Application Support/YTBar/playback-state.json` |
 | Audio cache | `~/Library/Application Support/YTBar/cache/` |
 | Debug logs | `~/Library/Logs/YTBar/ytbar.log` |
 
@@ -155,7 +157,7 @@ Logs are written to `~/Library/Logs/YTBar/ytbar.log` and auto-rotate at 500 KB. 
 
 ```bash
 swift build              # Debug build
-swift test               # Run tests (76 tests)
+swift test               # Run tests
 swift build -c release   # Release build
 ```
 

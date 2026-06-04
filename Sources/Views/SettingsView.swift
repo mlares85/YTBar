@@ -221,6 +221,12 @@ struct SettingsView: View {
     private var playbackSection: some View {
         Section("Playback") {
             Toggle(
+                "Resume playback on launch",
+                isOn: resumeSessionBinding
+            )
+            .accessibilityLabel("Resume queue and track position when the app restarts")
+            .help("Restore the queue, current track, and playback position from your last session.")
+            Toggle(
                 "Back button jumps to previous song",
                 isOn: restartEnabledBinding
             )
@@ -233,6 +239,16 @@ struct SettingsView: View {
             .accessibilityLabel("Auto-extend queue with a radio mix when nearing the end")
             .help("When the queue has fewer than 5 upcoming tracks, fetch a radio mix seeded from the current song and append it (deduped).")
         }
+    }
+
+    private var resumeSessionBinding: Binding<Bool> {
+        Binding(
+            get: { vm.resumeSessionEnabled },
+            set: {
+                vm.resumeSessionEnabled = $0
+                vm.onSetResumeSession?($0)
+            }
+        )
     }
 
     private var autoExtendBinding: Binding<Bool> {
