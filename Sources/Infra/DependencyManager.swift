@@ -24,6 +24,8 @@ final class DependencyManager: Sendable {
         self.basePath = basePath ?? Self.defaultBasePath
     }
 
+    static let maxAgeDays = 90
+
     func ensureInstalled() async throws {
         guard !isInstalled else { return }
         try await install()
@@ -37,6 +39,32 @@ final class DependencyManager: Sendable {
 
     func update() async throws {
         try await install()
+    }
+
+    /// Days since the yt-dlp binary was last modified (installed/updated).
+    func daysSinceInstall() -> Int {
+        guard let attrs = try? FileManager.default.attributesOfItem(
+            atPath: ytdlpPath
+        ),
+              let modified = attrs[.modificationDate] as? Date
+        else { return Int.max }
+        let days = Calendar.current.dateComponents(
+            [.day], from: modified, to: Date()
+        ).day ?? Int.max
+        return max(days, 0)
+    }
+
+    var isOutdated: Bool {
+        daysSinceInstall() > Self.maxAgeDays
+    }
+
+    /// Installs if missing, updates if older than maxAgeDays.
+    func ensureUpToDate() async throws {
+        if !isInstalled {
+            try await install()
+        } else if isOutdated {
+            try await update()
+        }
     }
 }
 

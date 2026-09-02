@@ -122,6 +122,63 @@ final class DependencyManagerTests: XCTestCase {
         XCTAssertTrue(sut.isInstalled)
     }
 
+    // MARK: - Version / Age
+
+    func testDaysSinceInstallReturnsMaxWhenMissing() {
+        XCTAssertEqual(sut.daysSinceInstall(), Int.max)
+    }
+
+    func testDaysSinceInstallReturnsZeroForFreshBinary() throws {
+        try createFakeBinary()
+        XCTAssertEqual(sut.daysSinceInstall(), 0)
+    }
+
+    func testIsOutdatedWhenBinaryMissing() {
+        XCTAssertTrue(sut.isOutdated)
+    }
+
+    func testIsNotOutdatedForFreshBinary() throws {
+        try createFakeBinary()
+        XCTAssertFalse(sut.isOutdated)
+    }
+
+    func testIsOutdatedForOldBinary() throws {
+        try createFakeBinary()
+        let old = Date().addingTimeInterval(-91 * 86400)
+        try FileManager.default.setAttributes(
+            [.modificationDate: old],
+            ofItemAtPath: sut.ytdlpPath
+        )
+        XCTAssertTrue(sut.isOutdated)
+    }
+
+    func testEnsureUpToDateUpdatesOutdatedBinary() async throws {
+        try createFakeBinary()
+        let old = Date().addingTimeInterval(-91 * 86400)
+        try FileManager.default.setAttributes(
+            [.modificationDate: old],
+            ofItemAtPath: sut.ytdlpPath
+        )
+        let assetURL = "https://github.com/yt-dlp/yt-dlp_macos"
+        mockClient.responses = [
+            makeReleaseResponse(assetURL: assetURL),
+            makeBinaryResponse(),
+        ]
+
+        try await sut.ensureUpToDate()
+
+        XCTAssertFalse(sut.isOutdated)
+    }
+
+    func testEnsureUpToDateSkipsFreshBinary() async throws {
+        try createFakeBinary()
+        mockClient.responses = []
+
+        try await sut.ensureUpToDate()
+
+        XCTAssertNil(mockClient.lastRequest)
+    }
+
     // MARK: - Helpers
 
     private func createFakeBinary() throws {

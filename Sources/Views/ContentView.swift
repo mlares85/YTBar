@@ -25,7 +25,40 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if vm.ytdlpOutdated && !vm.ytdlpBannerDismissed {
+                ytdlpBanner
+            }
+        }
         .animation(.easeInOut(duration: 0.25), value: vm.activeToast != nil)
+    }
+
+    private var ytdlpBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text("yt-dlp is outdated — playback may fail")
+                .font(.system(size: 11))
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Button("Update") { vm.updateYtdlp() }
+                .font(.system(size: 11, weight: .medium))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(vm.isUpdatingYtdlp)
+            Button {
+                vm.ytdlpBannerDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Dismiss banner")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.orange.opacity(0.1))
     }
 
     // MARK: - Active track layout (sliding browse panel)

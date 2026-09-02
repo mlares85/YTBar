@@ -37,6 +37,7 @@ final class MockAVPlayerEngine: AudioPlayerEngine {
     }
 
     func simulateFinished() { onFinished?() }
+    func simulateFailure() { onStatusChange?(.failed) }
 }
 
 // MARK: - Tests
@@ -137,6 +138,34 @@ final class AudioPlayerTests: XCTestCase {
         engine.simulateFinished()
 
         wait(for: [exp], timeout: 1.0)
+    }
+
+    // MARK: - Playback Error Callback
+
+    func testPlaybackErrorCallbackFiresOnFailure() {
+        let exp = expectation(description: "error")
+        sut.onPlaybackError = { message in
+            XCTAssertEqual(message, "Failed to load")
+            exp.fulfill()
+        }
+
+        sut.load(url: testURL)
+        sut.play()
+        engine.simulateFailure()
+
+        wait(for: [exp], timeout: 1.0)
+    }
+
+    func testStateIsErrorAfterFailure() {
+        let exp = expectation(description: "error-state")
+        sut.onPlaybackError = { _ in exp.fulfill() }
+
+        sut.load(url: testURL)
+        sut.play()
+        engine.simulateFailure()
+
+        wait(for: [exp], timeout: 1.0)
+        XCTAssertEqual(sut.state, .error("Failed to load"))
     }
 
     // MARK: - Load Resets State

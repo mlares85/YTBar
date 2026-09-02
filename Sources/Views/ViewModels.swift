@@ -68,6 +68,10 @@ final class AppViewModel: ObservableObject {
     @Published var queueSourcePlaylistTitle: String?
     @Published var isSavingPlaylist = false
     @Published var activeToast: Toast?
+    @Published var autoUpdateYtdlp: Bool = true
+    @Published var ytdlpOutdated: Bool = false
+    @Published var isUpdatingYtdlp: Bool = false
+    @Published var ytdlpBannerDismissed: Bool = false
     private var toastDismissTask: Task<Void, Never>?
 
     // Liked Music cache — persists across navigations within the same app
@@ -121,6 +125,8 @@ final class AppViewModel: ObservableObject {
     var onRateVideo: ((String, String) async throws -> Void)?
     var onGetRating: ((String) async throws -> String)?
     var onSaveQueueAsPlaylist: ((String, [Track]) async throws -> String)?
+    var onSetAutoUpdateYtdlp: ((Bool) -> Void)?
+    var onUpdateYtdlp: (() async throws -> Void)?
 
     func toggleLyrics() {
         showLyrics.toggle()
@@ -465,7 +471,7 @@ final class AppViewModel: ObservableObject {
         playlists = []
     }
 
-    func checkForUpdates() {}
+    // checkForUpdates removed — replaced by updateYtdlp()
 
     func showToast(_ style: ToastStyle, message: String, detail: String? = nil) {
         toastDismissTask?.cancel()
@@ -496,6 +502,23 @@ final class AppViewModel: ObservableObject {
 
     func keepOffline(tracks: [Track]) {
         onKeepOffline?(tracks.map(\.id))
+    }
+
+    func updateYtdlp() {
+        guard !isUpdatingYtdlp else { return }
+        isUpdatingYtdlp = true
+        Task {
+            defer { isUpdatingYtdlp = false }
+            do {
+                try await onUpdateYtdlp?()
+                ytdlpOutdated = false
+                ytdlpBannerDismissed = false
+                showToast(.success, message: "yt-dlp updated")
+            } catch {
+                debugLog("yt-dlp update error: \(error)")
+                showToast(.error, message: "yt-dlp update failed")
+            }
+        }
     }
 
     func cachedCount(tracks: [Track]) -> Int {

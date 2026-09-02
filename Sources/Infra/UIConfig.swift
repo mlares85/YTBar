@@ -10,6 +10,7 @@ struct UIConfig: Codable {
     var debugLoggingEnabled: Bool = false
     var volume: Double = 0.7
     var resumeSessionEnabled: Bool = true
+    var autoUpdateYtdlp: Bool = true
 
     static let `default` = UIConfig(windowOpacity: 1.0)
 
@@ -55,6 +56,7 @@ extension UIConfig {
         case debugLoggingEnabled
         case volume
         case resumeSessionEnabled
+        case autoUpdateYtdlp
     }
 
     init(from decoder: Decoder) throws {
@@ -68,7 +70,8 @@ extension UIConfig {
             autoExtendQueueWithRadio: (try? c.decode(Bool.self, forKey: .autoExtendQueueWithRadio)) ?? true,
             debugLoggingEnabled: (try? c.decode(Bool.self, forKey: .debugLoggingEnabled)) ?? false,
             volume: (try? c.decode(Double.self, forKey: .volume)) ?? 0.7,
-            resumeSessionEnabled: (try? c.decode(Bool.self, forKey: .resumeSessionEnabled)) ?? true
+            resumeSessionEnabled: (try? c.decode(Bool.self, forKey: .resumeSessionEnabled)) ?? true,
+            autoUpdateYtdlp: (try? c.decode(Bool.self, forKey: .autoUpdateYtdlp)) ?? true
         )
     }
 }

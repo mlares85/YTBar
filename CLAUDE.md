@@ -59,6 +59,25 @@ The DMG is gitignored. Upload it to GitHub Releases manually or via `gh release 
 - `playGeneration` counter prevents race conditions on rapid song changes
 - Timer-based UI sync: 0.1s for playback progress, 0.5s for queue state
 
+## Session Workflow
+
+- **Start every session** with `/initme` — loads context, checks git/tests, shows what's done vs. what's left
+- **End every session** with `/mup` — updates `docs/activeContext.md` and `ARCHITECTURE.md`, commits
+
+## State Documents
+
+- **`docs/activeContext.md`** = current focus + session log. Keep under 50 lines; archive older entries to `docs/activeContext.archive.md`.
+- **`ARCHITECTURE.md`** = non-obvious patterns and constraints as tagged single-line bullets. Retrieve by tag: `grep '\[player\]' ARCHITECTURE.md`. Update via `/mup`.
+- Record outcomes, not logs. Be specific and actionable.
+
+## Architecture Notes
+
+See `ARCHITECTURE.md` for non-obvious patterns discovered during implementation.
+
+Tags: `[api]`, `[player]`, `[auth]`, `[cache]`, `[ui]`, `[build]`, `[yt-dlp]`
+
+Read it at session start (via `/initme`) and update it at session end (via `/mup`). Entries should be 1-2 sentences. Prune entries whose root cause is fixed. Mark workarounds with `WORKAROUND:` so they're findable.
+
 ## Public Repo
 
 - Remote `public` -> github.com/mlares85/YTBar (GPL v3)

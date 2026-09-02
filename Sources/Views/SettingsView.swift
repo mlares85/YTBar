@@ -13,6 +13,7 @@ struct SettingsView: View {
             layoutSection
             appearanceSection
             CacheSettingsView()
+            ytdlpSection
             aboutSection
             diagnosticsSection
             quitSection
@@ -349,6 +350,45 @@ struct SettingsView: View {
         )
     }
 
+    private var ytdlpSection: some View {
+        Section("yt-dlp") {
+            Toggle(
+                "Auto-update on launch",
+                isOn: autoUpdateYtdlpBinding
+            )
+            .accessibilityLabel("Automatically update yt-dlp when the app launches")
+            .help("When enabled, yt-dlp is updated on launch if older than 90 days.")
+            HStack {
+                Button { vm.updateYtdlp() } label: {
+                    if vm.isUpdatingYtdlp {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Update yt-dlp Now")
+                    }
+                }
+                .font(.system(size: 12))
+                .disabled(vm.isUpdatingYtdlp)
+                .accessibilityLabel("Update yt-dlp now")
+                .help("Download the latest yt-dlp binary")
+                if vm.ytdlpOutdated {
+                    Label("Outdated", systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private var autoUpdateYtdlpBinding: Binding<Bool> {
+        Binding(
+            get: { vm.autoUpdateYtdlp },
+            set: {
+                vm.autoUpdateYtdlp = $0
+                vm.onSetAutoUpdateYtdlp?($0)
+            }
+        )
+    }
+
     private var aboutSection: some View {
         Section("About") {
             HStack {
@@ -359,10 +399,6 @@ struct SettingsView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
-            Button("Check for yt-dlp updates", action: vm.checkForUpdates)
-                .font(.system(size: 12))
-                .accessibilityLabel("Check for yt-dlp updates")
-                .help("Check for yt-dlp updates")
         }
     }
 

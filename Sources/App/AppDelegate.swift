@@ -151,7 +151,12 @@ private extension AppDelegate {
 
     func installDependencies() {
         Task {
-            try? await dependencyManager.ensureInstalled()
+            if uiConfig.autoUpdateYtdlp {
+                try? await dependencyManager.ensureUpToDate()
+            } else {
+                try? await dependencyManager.ensureInstalled()
+            }
+            viewModel.ytdlpOutdated = dependencyManager.isOutdated
         }
     }
 }
@@ -319,6 +324,17 @@ private extension AppDelegate {
             try? self.uiConfig.save()
             if !enabled { PlaybackState.clear() }
         }
+        viewModel.autoUpdateYtdlp = uiConfig.autoUpdateYtdlp
+        viewModel.onSetAutoUpdateYtdlp = { [weak self] enabled in
+            guard let self else { return }
+            self.uiConfig.autoUpdateYtdlp = enabled
+            try? self.uiConfig.save()
+        }
+        viewModel.onUpdateYtdlp = { [weak self] in
+            guard let self else { return }
+            try await self.dependencyManager.update()
+            self.urlCache.removeAll()
+        }
     }
 
     func applyWindowOpacity(_ value: Double) {
@@ -396,6 +412,11 @@ private extension AppDelegate {
         }
         audioPlayer.onTrackFinished = { [weak self] in
             Task { @MainActor in self?.viewModel.next() }
+        }
+        audioPlayer.onPlaybackError = { [weak self] msg in
+            Task { @MainActor in
+                self?.handlePlaybackError(msg)
+            }
         }
         viewModel.onSeek = { [weak self] seconds in
             guard let self else { return }
@@ -789,6 +810,19 @@ private extension AppDelegate {
             Task.detached { [weak self] in
                 _ = try? await self?.cachedStreamURL(for: track.id)
             }
+        }
+    }
+
+    func handlePlaybackError(_ message: String) {
+        let isOutdated = dependencyManager.daysSinceInstall() > 90
+        if isOutdated {
+            viewModel.showToast(
+                .error,
+                message: "Playback failed — yt-dlp is outdated",
+                detail: "Update in Settings or restart the app"
+            )
+        } else {
+            viewModel.showToast(.error, message: "Playback failed")
         }
     }
 

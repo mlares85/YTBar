@@ -29,6 +29,7 @@ final class AudioPlayer: ObservableObject {
     @Published var volume: Float = 1.0
 
     var onTrackFinished: (() -> Void)?
+    var onPlaybackError: ((String) -> Void)?
     var realDuration: TimeInterval = 0
     private var didFireFinished = false
     private let engine: AudioPlayerEngine
@@ -87,6 +88,7 @@ private extension AudioPlayer {
                     self.state = .playing
                 case .failed:
                     self.state = .error("Failed to load")
+                    self.onPlaybackError?("Failed to load")
                 case .unknown: break
                 }
             }
