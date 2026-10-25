@@ -71,6 +71,8 @@ final class AppViewModel: ObservableObject {
     @Published var autoUpdateYtdlp: Bool = true
     @Published var ytdlpOutdated: Bool = false
     @Published var isUpdatingYtdlp: Bool = false
+    @Published var ytdlpVersion: String?
+    @Published var ytdlpLatestVersion: String?
     @Published var ytdlpBannerDismissed: Bool = false
     private var toastDismissTask: Task<Void, Never>?
 
@@ -127,6 +129,8 @@ final class AppViewModel: ObservableObject {
     var onSaveQueueAsPlaylist: ((String, [Track]) async throws -> String)?
     var onSetAutoUpdateYtdlp: ((Bool) -> Void)?
     var onUpdateYtdlp: (() async throws -> Void)?
+    var onFetchYtdlpVersion: (() async -> String?)?
+    var onFetchYtdlpLatestVersion: (() async -> String?)?
 
     func toggleLyrics() {
         showLyrics.toggle()
@@ -513,6 +517,8 @@ final class AppViewModel: ObservableObject {
                 try await onUpdateYtdlp?()
                 ytdlpOutdated = false
                 ytdlpBannerDismissed = false
+                ytdlpVersion = await onFetchYtdlpVersion?()
+                ytdlpLatestVersion = nil
                 showToast(.success, message: "yt-dlp updated")
             } catch {
                 debugLog("yt-dlp update error: \(error)")

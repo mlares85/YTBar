@@ -58,6 +58,25 @@ final class DependencyManager: Sendable {
         daysSinceInstall() > Self.maxAgeDays
     }
 
+    func version() async -> String? {
+        guard isInstalled else { return nil }
+        let path = ytdlpPath
+        return await Task.detached {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: path)
+            proc.arguments = ["--version"]
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = Pipe()
+            guard (try? proc.run()) != nil else { return nil }
+            proc.waitUntilExit()
+            guard proc.terminationStatus == 0 else { return nil }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            return String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }.value
+    }
+
     /// Installs if missing, updates if older than maxAgeDays.
     func ensureUpToDate() async throws {
         if !isInstalled {
@@ -82,6 +101,20 @@ extension DependencyManager {
             throw DependencyManagerError.invalidResponse
         }
         return try findMacOSAsset(in: json)
+    }
+
+    static func parseTagName(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(
+            with: data
+        ) as? [String: Any] else { return nil }
+        return json["tag_name"] as? String
+    }
+
+    func latestVersion() async -> String? {
+        let request = URLRequest(url: Self.latestReleaseURL)
+        guard let (data, _) = try? await client.data(for: request)
+        else { return nil }
+        return Self.parseTagName(from: data)
     }
 }
 

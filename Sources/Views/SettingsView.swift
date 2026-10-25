@@ -352,6 +352,7 @@ struct SettingsView: View {
 
     private var ytdlpSection: some View {
         Section("yt-dlp") {
+            ytdlpVersionRow
             Toggle(
                 "Auto-update on launch",
                 isOn: autoUpdateYtdlpBinding
@@ -375,6 +376,39 @@ struct SettingsView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
                 }
+            }
+        }
+    }
+
+    private var ytdlpUpdateAvailable: Bool {
+        guard let installed = vm.ytdlpVersion,
+              let latest = vm.ytdlpLatestVersion else { return false }
+        return installed != latest
+    }
+
+    @ViewBuilder
+    private var ytdlpVersionRow: some View {
+        if let version = vm.ytdlpVersion {
+            HStack {
+                Text("Version")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(version)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+            .accessibilityLabel("yt-dlp version \(version)")
+            if ytdlpUpdateAvailable, let latest = vm.ytdlpLatestVersion {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .foregroundStyle(.blue)
+                    Text("\(latest) available")
+                        .foregroundStyle(.blue)
+                }
+                .font(.system(size: 11))
+                .accessibilityLabel("yt-dlp version \(latest) available")
             }
         }
     }

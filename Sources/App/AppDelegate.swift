@@ -157,6 +157,8 @@ private extension AppDelegate {
                 try? await dependencyManager.ensureInstalled()
             }
             viewModel.ytdlpOutdated = dependencyManager.isOutdated
+            viewModel.ytdlpVersion = await dependencyManager.version()
+            viewModel.ytdlpLatestVersion = await dependencyManager.latestVersion()
         }
     }
 }
@@ -335,6 +337,12 @@ private extension AppDelegate {
             try await self.dependencyManager.update()
             self.urlCache.removeAll()
         }
+        viewModel.onFetchYtdlpVersion = { [weak self] in
+            await self?.dependencyManager.version()
+        }
+        viewModel.onFetchYtdlpLatestVersion = { [weak self] in
+            await self?.dependencyManager.latestVersion()
+        }
     }
 
     func applyWindowOpacity(_ value: Double) {
@@ -359,7 +367,11 @@ private extension AppDelegate {
     /// Observes the view model so the popover resizes to match the
     /// collapsed/expanded browse-panel state.
     func observeBrowsePanelSize() {
-        viewModel.objectWillChange
+        viewModel.$browsePanelExpanded
+            .combineLatest(
+                viewModel.$currentTrack.map { $0 != nil }.removeDuplicates(),
+                viewModel.$playerState.removeDuplicates()
+            )
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updatePopoverSizeIfNeeded() }
             .store(in: &cancellables)
@@ -467,9 +479,9 @@ private extension AppDelegate {
     }
 
     func startUISync() {
-        // Fast timer for playback progress — keeps lyrics in sync.
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self else { return }
+            guard self.audioPlayer.state == .playing || self.pendingTrack != nil else { return }
             self.viewModel.progress = self.audioPlayer.currentTime
             if self.pendingTrack == nil {
                 self.viewModel.playerState = self.audioPlayer.state
@@ -480,18 +492,36 @@ private extension AppDelegate {
                 self.viewModel.duration = self.audioPlayer.duration / 2
             }
         }
-        // Slower timer for queue state, cache stats, Now Playing bridge.
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self else { return }
-            self.viewModel.queueTracks = self.queueManager.tracks
-            self.viewModel.queueIndex = self.queueManager.currentIndex
-            self.viewModel.autoExtendStartIndex = self.queueManager.autoExtendStartIndex
-            self.viewModel.isShuffled = self.queueManager.isShuffled
-            self.viewModel.repeatMode = self.queueManager.repeatMode
-            self.viewModel.cacheUsageMB = self.cacheMB()
+            self.syncQueueState()
+            guard self.audioPlayer.state.isActive else { return }
             self.syncNowPlaying()
         }
         startMemoryCleanup()
+    }
+
+    func syncQueueState() {
+        let q = queueManager!
+        if viewModel.queueTracks != q.tracks {
+            viewModel.queueTracks = q.tracks
+        }
+        if viewModel.queueIndex != q.currentIndex {
+            viewModel.queueIndex = q.currentIndex
+        }
+        if viewModel.autoExtendStartIndex != q.autoExtendStartIndex {
+            viewModel.autoExtendStartIndex = q.autoExtendStartIndex
+        }
+        if viewModel.isShuffled != q.isShuffled {
+            viewModel.isShuffled = q.isShuffled
+        }
+        if viewModel.repeatMode != q.repeatMode {
+            viewModel.repeatMode = q.repeatMode
+        }
+        let mb = cacheMB()
+        if viewModel.cacheUsageMB != mb {
+            viewModel.cacheUsageMB = mb
+        }
     }
 
     func startMemoryCleanup() {

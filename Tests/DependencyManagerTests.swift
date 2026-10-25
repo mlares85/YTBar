@@ -179,6 +179,58 @@ final class DependencyManagerTests: XCTestCase {
         XCTAssertNil(mockClient.lastRequest)
     }
 
+    // MARK: - latestVersion
+
+    func testParseTagNameFromRelease() {
+        let json: [String: Any] = [
+            "tag_name": "2024.10.07",
+            "assets": []
+        ]
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        XCTAssertEqual(
+            DependencyManager.parseTagName(from: data), "2024.10.07"
+        )
+    }
+
+    func testParseTagNameReturnsNilForBadData() {
+        let data = Data("not json".utf8)
+        XCTAssertNil(DependencyManager.parseTagName(from: data))
+    }
+
+    func testLatestVersionFetchesTagName() async {
+        let json: [String: Any] = [
+            "tag_name": "2024.10.07",
+            "assets": []
+        ]
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        let response = HTTPURLResponse(
+            url: URL(string: "https://api.github.com")!,
+            statusCode: 200, httpVersion: nil, headerFields: nil
+        )!
+        mockClient.result = (data, response)
+        let version = await sut.latestVersion()
+        XCTAssertEqual(version, "2024.10.07")
+    }
+
+    // MARK: - version
+
+    func testVersionReturnsNilWhenNotInstalled() async {
+        let version = await sut.version()
+        XCTAssertNil(version)
+    }
+
+    func testVersionReturnsBinaryOutput() async throws {
+        try createVersionScript("2024.08.19")
+        let version = await sut.version()
+        XCTAssertEqual(version, "2024.08.19")
+    }
+
+    func testVersionTrimsWhitespace() async throws {
+        try createVersionScript("2024.08.19\n")
+        let version = await sut.version()
+        XCTAssertEqual(version, "2024.08.19")
+    }
+
     // MARK: - Helpers
 
     private func createFakeBinary() throws {
@@ -195,6 +247,21 @@ final class DependencyManagerTests: XCTestCase {
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o755],
             ofItemAtPath: path.path
+        )
+    }
+
+    private func createVersionScript(_ version: String) throws {
+        let binDir = tempDir.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(
+            at: binDir, withIntermediateDirectories: true
+        )
+        let script = "#!/bin/sh\necho \"\(version)\""
+        let path = binDir.appendingPathComponent("yt-dlp")
+        try script.write(
+            to: path, atomically: true, encoding: .utf8
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: path.path
         )
     }
 
